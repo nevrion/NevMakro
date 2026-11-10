@@ -35,7 +35,7 @@ function NM.ExportRecipe(r)
         }, ",")
     end
     return table.concat({
-        PREFIX, esc(r.name), r.showTooltip and "1" or "0", r.long and "1" or "0", table.concat(blocks, "|"),
+        PREFIX, esc(r.name), (r.showTooltip and (r.tipAuto and "2" or "1") or "0"), r.long and "1" or "0", table.concat(blocks, "|"),
     }, "~")
 end
 
@@ -51,7 +51,7 @@ function NM.ImportRecipe(code)
     if head[1] ~= PREFIX or #head < 5 then return nil, "Das ist kein NevMakro-Code." end
 
     local r = {
-        name = NM.Trunc(unesc(head[2]), 16), showTooltip = head[3] == "1", long = head[4] == "1",
+        name = NM.Trunc(unesc(head[2]), 16), showTooltip = head[3] ~= "0", tipAuto = head[3] == "2" or nil, long = head[4] == "1",
         perChar = true, blocks = {},
     }
     if r.name == "" then r.name = "Importiert" end

@@ -387,6 +387,7 @@ function RefreshBuilder()
 
     if b.name:GetText() ~= cur.name then b.name:SetText(cur.name) end
     b.tooltipCheck:SetChecked(cur.showTooltip)
+    b.autoCheck:SetChecked(cur.tipAuto)
     b.perCharCheck:SetChecked(cur.perChar)
     b.longCheck:SetChecked(cur.long)
     b.blockList:SetData(cur.blocks)
@@ -564,6 +565,13 @@ local function BuildBuilder(parent)
 
     p.tooltipCheck = Check(e, "Icon folgt dem Zauber", function(v) cur.showTooltip = v; RefreshPreview() end)
     p.tooltipCheck:SetPoint("LEFT", p.name, "RIGHT", 14, 0)
+    p.autoCheck = Check(e, "Symbol wechselt je nach Lage", function(v)
+        cur.tipAuto = v or nil
+        if v then cur.showTooltip = true end
+        RefreshBuilder()
+    end)
+    p.autoCheck:SetPoint("LEFT", p.tooltipCheck, "LEFT", 210, 0)
+    Tip(p.autoCheck, "Statt immer den ersten Zauber zu zeigen, wählt das Spiel selbst aus, welcher Zauber der Bedingungen gerade greift, und zeigt dessen Symbol (z.B. Wiederbeleben, wenn das Tier tot ist).")
     Tip(p.tooltipCheck, "#showtooltip: Das Leistensymbol zeigt den ersten Zauber des Makros samt Abklingzeit.")
 
     p.perCharCheck = Check(e, "Nur dieser Charakter", function(v) cur.perChar = v end)

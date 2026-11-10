@@ -16,8 +16,8 @@ NM.CLASS_TEMPLATES = {
     HUNTER = {
         { name = "Pet + Arkaner Schuss", desc = "Pet greift an, dann Arkaner Schuss. Symbol zeigt den Zauber.",
           blocks = { B("petattack"), S(3044, "Arcane Shot") } },
-        { name = "Pet rufen/heilen", desc = "Kein Pet: Tier rufen. Pet da: Tier heilen. Eine Taste für beides.",
-          blocks = { S(883, "Call Pet", { conds = { pet = "nopet" } }), S(136, "Mend Pet", { conds = { pet = "pet" }, join = "or" }) } },
+        { name = "Pet rufen/heilen/beleben", tipAuto = true, desc = "Eine Taste fürs Tier: tot = wiederbeleben, lebt = heilen, fehlt = rufen. Das Symbol wechselt passend mit.",
+          blocks = { S(982, "Revive Pet", { conds = { pet = "petdead" } }), S(136, "Mend Pet", { conds = { pet = "petalive" }, join = "or" }), S(883, "Call Pet", { conds = { pet = "nopet" }, join = "or" }) } },
         { name = "Mal des Jägers + Pet", desc = "Markiert das Ziel und schickt das Pet los.",
           blocks = { S(1130, "Hunter's Mark"), B("petattack") } },
         { name = "Schlangenbiss, Schuss", desc = "Wechselt bei jedem Druck zwischen Schlangenbiss und Arkanem Schuss, Reset bei neuem Ziel.",
@@ -231,7 +231,7 @@ end
 
 -- Baut aus einer Vorlage ein neues Rezept (Zaubernamen in der Client-Sprache)
 function NM.Instantiate(tpl)
-    local r = { name = NM.Trunc(tpl.name, 16), showTooltip = tpl.tip ~= false, perChar = true, long = false, blocks = {} }
+    local r = { name = NM.Trunc(tpl.name, 16), showTooltip = tpl.tip ~= false, tipAuto = tpl.tipAuto, perChar = true, long = false, blocks = {} }
     for _, src in ipairs(tpl.blocks) do
         local b = { type = src.type, text = src.text or "", target = src.target or "normal", join = src.join, reset = src.reset, conds = {} }
         for k, v in pairs(src.conds or {}) do b.conds[k] = v end

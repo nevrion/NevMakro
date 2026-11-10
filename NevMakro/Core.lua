@@ -87,7 +87,9 @@ NM.COND_GROUPS = {
     { key = "pet", label = "Pet", opts = {
         { id = "any", label = "egal" },
         { id = "pet", label = "vorhanden", c = "pet" },
-        { id = "nopet", label = "keins", c = "nopet" } } },
+        { id = "nopet", label = "keins", c = "nopet" },
+        { id = "petdead", label = "ist tot", c = "@pet,dead" },
+        { id = "petalive", label = "lebt", c = "@pet,exists,nodead" } } },
     { key = "stealth", label = "Tarnung", opts = {
         { id = "any", label = "egal" },
         { id = "stealth", label = "getarnt", c = "stealth" },
@@ -214,7 +216,7 @@ end
 function NM.BuildBody(recipe)
     local lines, first = NM.BuildLines(recipe)
     if #lines == 0 then return "" end
-    local head = recipe.showTooltip and ("#showtooltip" .. (first and (" " .. first) or "")) or nil
+    local head = recipe.showTooltip and ("#showtooltip" .. ((first and not recipe.tipAuto) and (" " .. first) or "")) or nil
     if recipe.long and recipe.id then
         local outer = {}
         if head then outer[1] = head end
