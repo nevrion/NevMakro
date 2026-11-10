@@ -861,8 +861,9 @@ local function BuildSuggest(parent)
     local data = {}
     for _, t in ipairs(NM.CLASS_TEMPLATES[classFile] or {}) do data[#data + 1] = t end
     for _, t in ipairs(NM.GENERAL_TEMPLATES) do data[#data + 1] = t end
+    for _, t in ipairs(NM.PROFESSION_TEMPLATES) do data[#data + 1] = t end
 
-    local head = Label(p, "Vorschläge für " .. tostring(classLoc) .. " (und allgemeine Makros). \"Übernehmen\" legt ein Rezept im Baukasten an, das du anpassen und speichern kannst.", "GameFontHighlight")
+    local head = Label(p, "Vorschläge für " .. tostring(classLoc) .. " (allgemeine Makros und Berufe). \"Übernehmen\" legt ein Rezept im Baukasten an, das du anpassen und speichern kannst.", "GameFontHighlight")
     head:SetPoint("TOPLEFT", 0, 0)
     head:SetPoint("RIGHT", 0, 0)
     head:SetJustifyH("LEFT")

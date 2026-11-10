@@ -114,6 +114,20 @@ NM.GENERAL_TEMPLATES = {
       blocks = { B("dismount") } },
 }
 
+-- Berufe: Felder ohne Namen bleiben leer und werden im Baukasten ausgefüllt
+NM.PROFESSION_TEMPLATES = {
+    { name = "VZ/Handwerk: Rezept + Item", desc = "Beruf: Rezept und immer dasselbe Item verwenden (z.B. Verzauberkunst skillen). Im Baukasten Rezeptnamen und Item eintragen (Item aus der Tasche ins Feld ziehen), Verzauberfenster offen lassen, eine Taste drücken.",
+      blocks = { B("spell"), B("item") } },
+    { name = "Entzaubern", desc = "Beruf: Entzaubern und gleich das Item aus der Tasche eintragen, das aufgelöst werden soll.",
+      blocks = { S(13262, "Disenchant"), B("item") } },
+    { name = "Schlossknacken", desc = "Beruf (Schurke): Schloss knacken und gleich das Item (Truhe, Kiste) benutzen.",
+      blocks = { S(1804, "Pick Lock"), B("item") } },
+    { name = "Sammel-Tracking wechseln", desc = "Beruf: Kräuter und Erz suchen mit einer Taste, bei jedem Druck wird gewechselt.",
+      blocks = { { type = "castseq", castIds = { 2383, 2580 }, castEn = { "Find Herbs", "Find Minerals" } } } },
+    { name = "Angeln", desc = "Beruf: Angeln starten. Köder im Baukasten als Gegenstand davor setzen.",
+      blocks = { S(7620, "Fishing") } },
+}
+
 local function SpellText(id, en)
     local n = NM.SpellName(id)
     return (n and n ~= "") and n or en
