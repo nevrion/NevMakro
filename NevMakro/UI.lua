@@ -974,6 +974,7 @@ local function CreateMain()
     f:SetScript("OnDragStop", f.StopMovingOrSizing)
     tinsert(UISpecialFrames, "NevMakroFrame")
     ui = f
+    f:SetScale(math.max(0.6, math.min(1.6, NM.db.opts.scale or 1)))
 
     local header = f:CreateTexture(nil, "BACKGROUND")
     header:SetPoint("TOPLEFT", 1, -1)
@@ -1018,6 +1019,35 @@ local function CreateMain()
     BuildBuilder(content)
     BuildWizard(content)
     BuildSuggest(content)
+
+    local function ApplyScale(ns)
+        ns = math.max(0.6, math.min(1.6, ns))
+        local es, left, top = f:GetEffectiveScale(), f:GetLeft(), f:GetTop()
+        f:SetScale(ns)
+        if left and top then
+            local nes = f:GetEffectiveScale()
+            f:ClearAllPoints()
+            f:SetPoint("TOPLEFT", UIParent, "BOTTOMLEFT", left * es / nes, top * es / nes)
+        end
+        NM.db.opts.scale = ns
+    end
+    local grip = CreateFrame("Button", nil, f)
+    grip:SetSize(18, 18)
+    grip:SetPoint("BOTTOMRIGHT", -3, 3)
+    grip:SetNormalTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Up")
+    grip:SetHighlightTexture("Interface\\ChatFrame\\UI-ChatIM-SizeGrabber-Down")
+    grip:SetScript("OnMouseDown", function(self, btn) if btn == "LeftButton" then self.drag = true end end)
+    grip:SetScript("OnMouseUp", function(self, btn)
+        self.drag = false
+        if btn == "RightButton" then ApplyScale(1) end
+    end)
+    grip:SetScript("OnUpdate", function(self)
+        if not self.drag then return end
+        local cx = GetCursorPosition()
+        ApplyScale((cx - f:GetLeft() * f:GetEffectiveScale()) / (W * UIParent:GetEffectiveScale()))
+    end)
+    Tip(grip, "Ziehen: Fenstergröße ändern (60 bis 160 %). Rechtsklick: zurück auf 100 %.")
+
     f.sharePop = BuildShare(f)
     f.ShowShare = NM.ShowShare
     f:Hide()
