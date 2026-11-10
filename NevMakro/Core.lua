@@ -313,14 +313,34 @@ function NM.SaveMacro(name, body, perChar, oldName)
 end
 
 ---------------------------------------------------------------------------
--- Pet-Angriff-Assistent
+-- Leisten-Assistent
 ---------------------------------------------------------------------------
 
-function NM.BuildPetBody(spellName, opts)
+-- Zusätze, die der Leisten-Assistent vor den Zauber setzt (Reihenfolge = Reihenfolge im Makro)
+NM.BAR_EXTRAS = {
+    { key = "stopCasting", label = "Zauber abbrechen", line = "/stopcasting",
+      tip = "Bricht einen laufenden Zauber ab, bevor der neue beginnt (Spam-Tasten)." },
+    { key = "dismount", label = "Absteigen", line = "/dismount",
+      tip = "Steigt vom Reittier ab, bevor der Zauber gewirkt wird." },
+    { key = "targetEnemy", label = "Feind anvisieren", line = "/targetenemy [noharm]",
+      tip = "Visiert den nächsten Feind an, wenn du kein feindliches Ziel hast." },
+    { key = "petAttack", label = "Pet-Angriff", line = "/petattack [harm,nodead]",
+      tip = "Das Pet greift dein Ziel an (Hunter, Hexenmeister)." },
+    { key = "startAttack", label = "Kampf starten", line = "/startattack [harm,nodead]",
+      tip = "Schaltet den Auto-Angriff ein, sobald du einen Feind im Ziel hast." },
+}
+
+function NM.BuildBarBody(spellName, opts)
     local lines = { "#showtooltip " .. spellName }
-    if opts.petAttack then lines[#lines + 1] = "/petattack [harm,nodead]" end
-    if opts.startAttack then lines[#lines + 1] = "/startattack [harm,nodead]" end
-    lines[#lines + 1] = "/cast " .. spellName
+    for _, ex in ipairs(NM.BAR_EXTRAS) do
+        if opts[ex.key] then lines[#lines + 1] = ex.line end
+    end
+    local tg = ById(NM.TARGETS, opts.target or "normal")
+    local clause = ""
+    if tg.cond then
+        clause = "[" .. tg.cond .. "]" .. (tg.fallback and "[] " or " ")
+    end
+    lines[#lines + 1] = "/cast " .. clause .. spellName
     return table.concat(lines, "\n")
 end
 
@@ -357,8 +377,8 @@ end
 
 function NM.ApplyPet(row, opts)
     if InCombatLockdown() then return false, "Im Kampf nicht möglich." end
-    local body = NM.BuildPetBody(row.name, opts)
-    local mname = UniqueName("P-" .. row.name)
+    local body = NM.BuildBarBody(row.name, opts)
+    local mname = UniqueName("NM-" .. row.name)
     local idx, err = NM.SaveMacro(mname, body, opts.perChar)
     if not idx then return false, err end
     mname = err
@@ -409,15 +429,16 @@ f:SetScript("OnEvent", function(_, event, name)
     local db = NevMakroDB
     db.recipes = db.recipes or {}
     db.opts = db.opts or { petAttack = true, startAttack = false, perChar = true }
+    db.opts.target = db.opts.target or "normal"
     db.nextId = db.nextId or 1
     NevMakroChar.applied = NevMakroChar.applied or {}
     NM.db, NM.char = db, NevMakroChar
-    NM.Print("geladen. |cffffff00/nm|r öffnet den Makro-Baukasten, |cffffff00/nm pet|r den Pet-Angriff-Assistenten.")
+    NM.Print("geladen. |cffffff00/nm|r öffnet den Makro-Baukasten, |cffffff00/nm leiste|r den Leisten-Assistenten.")
 end)
 
 SLASH_NEVMAKRO1 = "/nm"
 SLASH_NEVMAKRO2 = "/nevmakro"
 SlashCmdList["NEVMAKRO"] = function(msg)
     msg = strlower(strtrim(msg or ""))
-    if NM.ToggleUI then NM.ToggleUI(msg == "pet" and 2 or 1) end
+    if NM.ToggleUI then NM.ToggleUI((msg == "leiste" or msg == "pet") and 2 or 1) end
 end

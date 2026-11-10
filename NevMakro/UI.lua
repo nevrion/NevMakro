@@ -682,30 +682,42 @@ local function BuildWizard(parent)
     p:SetAllPoints()
     ui.wizard = p
 
-    local info = Label(p, "Wähle Zauber aus deinen Aktionsleisten. Der Assistent ersetzt sie durch ein Makro, das zuerst dein Pet angreifen lässt und dann den Zauber wirkt - Symbol, Abklingzeit und Tastenbelegung bleiben am selben Platz. \"Rückgängig\" legt den Original-Zauber wieder hin.", "GameFontHighlight")
+    local info = Label(p, "Wähle Zauber von deinen Aktionsleisten und was davor passieren soll. Der Assistent ersetzt sie durch ein Makro (Symbol, Abklingzeit und Taste bleiben am selben Platz). \"Rückgängig\" legt den Original-Zauber wieder hin.", "GameFontHighlight")
     info:SetPoint("TOPLEFT", 0, 0)
     info:SetPoint("RIGHT", 0, 0)
     info:SetJustifyV("TOP")
-    info:SetHeight(48)
+    info:SetHeight(34)
 
     local opts = NM.db.opts
-    local c1 = Check(p, "Pet-Angriff (/petattack)", function(v) opts.petAttack = v end)
-    c1:SetPoint("TOPLEFT", 0, -56)
-    c1:SetChecked(opts.petAttack)
-    local c2 = Check(p, "Auto-Angriff (/startattack)", function(v) opts.startAttack = v end)
-    c2:SetPoint("LEFT", c1, "RIGHT", 180, 0)
-    c2:SetChecked(opts.startAttack)
+    Label(p, "ZUSÄTZE VOR DEM ZAUBER", "GameFontNormalSmall"):SetPoint("TOPLEFT", 0, -44)
+    local colW = 200
+    for i, ex in ipairs(NM.BAR_EXTRAS) do
+        local c = Check(p, ex.label, function(v) opts[ex.key] = v end)
+        c:SetPoint("TOPLEFT", ((i - 1) % 3) * colW, -62 - math.floor((i - 1) / 3) * 24)
+        c:SetChecked(opts[ex.key])
+        Tip(c, ex.tip)
+    end
     local c3 = Check(p, "Charakter-Makros nutzen", function(v) opts.perChar = v end)
-    c3:SetPoint("LEFT", c2, "RIGHT", 190, 0)
+    c3:SetPoint("TOPLEFT", 2 * colW, -86)
     c3:SetChecked(opts.perChar)
     Tip(c3, "Aus: Account-Makros (mehr Platz, für alle Charaktere sichtbar).")
 
-    local host = CreateFrame("Frame", nil, p)
-    host:SetPoint("TOPLEFT", 0, -90)
-    host:SetPoint("RIGHT", -90, 0)
-    host:SetHeight(12 * 24)
+    local tgLabel = Label(p, "Ziel des Zaubers:", "GameFontHighlight")
+    tgLabel:SetPoint("TOPLEFT", 2, -118)
+    local tgBtn = Button(p, "", 130, 22, function(self)
+        opts.target = CycleOption(NM.TARGETS, opts.target or "normal", 1)
+        self:SetText(NM.ById(NM.TARGETS, opts.target).label)
+    end)
+    tgBtn:SetPoint("LEFT", tgLabel, "RIGHT", 10, 0)
+    tgBtn:SetText(NM.ById(NM.TARGETS, opts.target or "normal").label)
+    Tip(tgBtn, "Klick wechselt: Ziel, Mouseover (sonst Ziel), Fokus, Selbst, Pet, Ziel des Ziels. Für Heilzauber meist Mouseover.")
 
-    p.list = ScrollList(host, 12, 24, function(h)
+    local host = CreateFrame("Frame", nil, p)
+    host:SetPoint("TOPLEFT", 0, -148)
+    host:SetPoint("RIGHT", -90, 0)
+    host:SetHeight(11 * 24)
+
+    p.list = ScrollList(host, 11, 24, function(h)
         local row = CreateFrame("Frame", nil, h)
         row.check = Check(row, "", function(v) selected[row.item.slot] = v or nil end)
         row.check:SetPoint("LEFT", 0, 0)
@@ -720,7 +732,7 @@ local function BuildWizard(parent)
         row.check:SetChecked(selected[it.slot] and true or false)
         row.icon:SetTexture(it.icon)
         if it.kind == "ours" then
-            row.text:SetText(("Platz %d  |cff55ff55%s|r  |cffaaaaaa(Pet-Makro)|r"):format(it.slot, it.name))
+            row.text:SetText(("Platz %d  |cff55ff55%s|r  |cffaaaaaa(Leisten-Makro)|r"):format(it.slot, it.name))
         else
             row.text:SetText(("Platz %d  %s"):format(it.slot, it.name))
         end
@@ -733,8 +745,8 @@ local function BuildWizard(parent)
     p.rescan = rescan
 
     local side = CreateFrame("Frame", nil, p)
-    side:SetPoint("TOPRIGHT", 0, -90)
-    side:SetSize(84, 12 * 24)
+    side:SetPoint("TOPRIGHT", 0, -148)
+    side:SetSize(84, 11 * 24)
     local sy = 0
     local function sideButton(text, fn, tip)
         local b = Button(side, text, 84, 24, fn)
@@ -764,24 +776,24 @@ local function BuildWizard(parent)
             end
         end
         if ok == 0 and fail == 0 then
-            NM.Print("Nichts ausgewählt (" .. (kind == "spell" and "Zauber" or "Pet-Makros") .. " markieren).")
+            NM.Print("Nichts ausgewählt (" .. (kind == "spell" and "Zauber" or "Leisten-Makros") .. " markieren).")
         else
             NM.Print(("%d %s%s"):format(ok, verb, fail > 0 and (", " .. fail .. " fehlgeschlagen: " .. tostring(lastErr)) or "."))
         end
         rescan()
     end
 
-    local apply = Button(p, "Pet-Angriff hinzufügen", 200, 26, function()
+    local apply = Button(p, "Auf Zauber anwenden", 200, 26, function()
         run("spell", function(it) return NM.ApplyPet(it, opts) end, "Zauber umgestellt")
     end)
     apply:SetPoint("TOPLEFT", host, "BOTTOMLEFT", 0, -10)
-    Tip(apply, "Ersetzt die markierten Zauber auf der Leiste durch Makros mit Pet-Angriff.")
+    Tip(apply, "Ersetzt die markierten Zauber auf der Leiste durch Makros mit den gewählten Zusätzen.")
 
     local undo = Button(p, "Rückgängig", 120, 26, function()
         run("ours", function(it) return NM.UndoPet(it) end, "Makros zurückgesetzt")
     end)
     undo:SetPoint("LEFT", apply, "RIGHT", 8, 0)
-    Tip(undo, "Löscht die markierten Pet-Makros und legt den Original-Zauber wieder auf den Platz.")
+    Tip(undo, "Löscht die markierten Leisten-Makros und legt den Original-Zauber wieder auf den Platz.")
 
     return p
 end
@@ -955,7 +967,7 @@ local function CreateMain()
 
     f.tabs = {
         Button(f, "Makro-Baukasten", 150, 26, function() ShowTab(1) end),
-        Button(f, "Pet-Angriff", 120, 26, function() ShowTab(2) end),
+        Button(f, "Leisten-Assistent", 140, 26, function() ShowTab(2) end),
         Button(f, "Vorschläge", 120, 26, function() ShowTab(3) end),
     }
     f.tabs[3]:SetPoint("RIGHT", close, "LEFT", -18, 0)
