@@ -1,12 +1,14 @@
 ## Interface: 16001
 ## Title: |cff4fc3f7NevMakro|r
 ## Title-deDE: |cff4fc3f7NevMakro|r - Makro-Baukasten
-## Notes: Makros per Klick und Drag&Drop bauen. Pet-Angriff-Assistent für Aktionsleisten-Zauber (Hunter). Befehl: /nm
-## Notes-deDE: Makros per Klick und Drag&Drop bauen. Pet-Angriff-Assistent für Aktionsleisten-Zauber (Hunter). Befehl: /nm
+## Notes: Makros per Klick bauen, teilen und für deine Klasse vorschlagen lassen. Befehl: /nm
+## Notes-deDE: Makros per Klick bauen, teilen und für deine Klasse vorschlagen lassen. Befehl: /nm
 ## Author: Pierre
-## Version: 0.2.0
+## Version: 0.3.0
 ## SavedVariables: NevMakroDB
 ## SavedVariablesPerCharacter: NevMakroChar
 
 Core.lua
+Templates.lua
+Share.lua
 UI.lua

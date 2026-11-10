@@ -1,6 +1,6 @@
 local _, NM = ...
 
-local W, H = 860, 600
+local W, H = 880, 640
 local RIGHT_X = 170
 local ui
 
@@ -30,10 +30,47 @@ local function Tip(frame, text)
     frame:HookScript("OnLeave", function() GameTooltip:Hide() end)
 end
 
+local FLAT = "Interface\\Buttons\\WHITE8X8"
+local T = {
+    bg = { 0.055, 0.06, 0.08, 0.97 }, panel = { 0.095, 0.105, 0.135, 1 }, field = { 0.04, 0.045, 0.06, 1 },
+    edge = { 0.2, 0.22, 0.28, 1 }, btn = { 0.15, 0.17, 0.22, 1 }, btnHover = { 0.21, 0.24, 0.31, 1 },
+    text = { 0.9, 0.92, 0.96 }, dim = { 0.55, 0.6, 0.68 }, accent = { 0.31, 0.76, 0.97 },
+}
+
+local function Flat(f, bg, edge)
+    f:SetBackdrop({ bgFile = FLAT, edgeFile = FLAT, edgeSize = 1, insets = { left = 1, right = 1, top = 1, bottom = 1 } })
+    f:SetBackdropColor(unpack(bg))
+    f:SetBackdropBorderColor(unpack(edge or T.edge))
+end
+
+local function Panel(parent, bg)
+    local f = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    Flat(f, bg or T.panel)
+    return f
+end
+
 local function Button(parent, text, w, h, onclick)
-    local b = CreateFrame("Button", uid(), parent, "UIPanelButtonTemplate")
+    local b = CreateFrame("Button", uid(), parent, "BackdropTemplate")
     b:SetSize(w, h or 22)
+    Flat(b, T.btn)
+    local fs = b:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    fs:SetPoint("CENTER", 0, 0)
+    b:SetFontString(fs)
+    b:SetDisabledFontObject("GameFontHighlight")
     b:SetText(text)
+    b:SetScript("OnEnter", function(self)
+        if self:IsEnabled() then self:SetBackdropColor(unpack(T.btnHover)); self:SetBackdropBorderColor(unpack(T.accent)) end
+    end)
+    b:SetScript("OnLeave", function(self)
+        if self:IsEnabled() then self:SetBackdropColor(unpack(T.btn)); self:SetBackdropBorderColor(unpack(T.edge)) end
+    end)
+    b:SetScript("OnMouseDown", function(self) if self:IsEnabled() then self:SetBackdropColor(0.08, 0.09, 0.12, 1) end end)
+    b:SetScript("OnMouseUp", function(self) if self:IsEnabled() then self:SetBackdropColor(unpack(T.btnHover)) end end)
+    b:SetScript("OnDisable", function(self)
+        self:SetBackdropColor(T.accent[1] * 0.35, T.accent[2] * 0.35, T.accent[3] * 0.35, 1)
+        self:SetBackdropBorderColor(unpack(T.accent))
+    end)
+    b:SetScript("OnEnable", function(self) self:SetBackdropColor(unpack(T.btn)); self:SetBackdropBorderColor(unpack(T.edge)) end)
     if onclick then b:SetScript("OnClick", onclick) end
     return b
 end
@@ -42,37 +79,52 @@ local function Label(parent, text, font)
     local l = parent:CreateFontString(nil, "OVERLAY", font or "GameFontNormal")
     l:SetText(text or "")
     l:SetJustifyH("LEFT")
+    if not font or font == "GameFontNormal" or font == "GameFontNormalLarge" then
+        l:SetTextColor(unpack(T.accent))
+    elseif font == "GameFontHighlight" or font == "GameFontHighlightSmall" then
+        l:SetTextColor(unpack(T.text))
+    else
+        l:SetTextColor(unpack(T.dim))
+    end
     return l
 end
 
 local function Check(parent, text, onclick)
-    local c = CreateFrame("CheckButton", uid(), parent, "UICheckButtonTemplate")
-    c:SetSize(24, 24)
+    local c = CreateFrame("CheckButton", uid(), parent, "BackdropTemplate")
+    c:SetSize(18, 18)
+    Flat(c, T.field)
+    c:SetCheckedTexture(FLAT)
+    local t = c:GetCheckedTexture()
+    t:SetVertexColor(unpack(T.accent))
+    t:ClearAllPoints()
+    t:SetPoint("TOPLEFT", 4, -4)
+    t:SetPoint("BOTTOMRIGHT", -4, 4)
     c.label = Label(c, text, "GameFontHighlight")
-    c.label:SetPoint("LEFT", c, "RIGHT", 2, 0)
+    c.label:SetPoint("LEFT", c, "RIGHT", 6, 0)
+    c:SetScript("OnEnter", function(self) self:SetBackdropBorderColor(unpack(T.accent)) end)
+    c:SetScript("OnLeave", function(self) self:SetBackdropBorderColor(unpack(T.edge)) end)
     c:SetScript("OnClick", function(self) onclick(self:GetChecked() and true or false) end)
     return c
 end
 
 local function Edit(parent, w)
-    local e = CreateFrame("EditBox", uid(), parent, "InputBoxTemplate")
-    e:SetSize(w, 20)
+    local e = CreateFrame("EditBox", uid(), parent, "BackdropTemplate")
+    e:SetSize(w, 22)
+    Flat(e, T.field)
+    e:SetFontObject("GameFontHighlight")
     e:SetAutoFocus(false)
-    e:SetTextInsets(4, 4, 0, 0)
+    e:SetTextInsets(6, 6, 0, 0)
     e:SetScript("OnEscapePressed", e.ClearFocus)
     e:SetScript("OnEnterPressed", e.ClearFocus)
+    e:SetScript("OnEditFocusGained", function(self) self:SetBackdropBorderColor(unpack(T.accent)) end)
+    e:SetScript("OnEditFocusLost", function(self) self:SetBackdropBorderColor(unpack(T.edge)) end)
     return e
 end
 
 local function PopupFrame(parent, w, h)
     local f = CreateFrame("Frame", uid(), parent, "BackdropTemplate")
     f:SetFrameStrata("TOOLTIP")
-    f:SetBackdrop({
-        bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        tile = true, tileSize = 16, edgeSize = 12,
-        insets = { left = 3, right = 3, top = 3, bottom = 3 },
-    })
+    Flat(f, { 0.075, 0.085, 0.11, 0.99 }, T.accent)
     f:SetSize(w, h)
     f:EnableMouse(true)
     f:Hide()
@@ -150,9 +202,13 @@ end
 
 local function BuildBlockRow(parent)
     local row = CreateFrame("Frame", nil, parent)
-    row.label = Label(row, "", "GameFontHighlight")
-    row.label:SetWidth(110)
-    row.label:SetPoint("LEFT", 0, 0)
+    row.bg = row:CreateTexture(nil, "BACKGROUND")
+    row.bg:SetPoint("TOPLEFT", 0, -1)
+    row.bg:SetPoint("BOTTOMRIGHT", 0, 1)
+    row.bg:SetColorTexture(1, 1, 1, 0.035)
+    row.label = Label(row, "", "GameFontNormal")
+    row.label:SetWidth(104)
+    row.label:SetPoint("LEFT", 6, 0)
 
     row.del = Button(row, "X", 22, 22, function(self)
         local r = self:GetParent()
@@ -420,19 +476,33 @@ local function BuildBuilder(parent)
     p:SetAllPoints()
     ui.builder = p
 
-    Label(p, "Meine Makros"):SetPoint("TOPLEFT", 0, 0)
+    local lp = Panel(p)
+    lp:SetPoint("TOPLEFT", -8, 8)
+    lp:SetPoint("BOTTOMLEFT", -8, -8)
+    lp:SetWidth(RIGHT_X - 4)
+    local ep = Panel(p)
+    ep:SetPoint("TOPLEFT", RIGHT_X, 8)
+    ep:SetPoint("BOTTOMRIGHT", 8, -8)
+
+    Label(p, "MEINE MAKROS", "GameFontNormalSmall"):SetPoint("TOPLEFT", 0, 0)
 
     local listHost = CreateFrame("Frame", nil, p)
     listHost:SetPoint("TOPLEFT", 0, -22)
-    listHost:SetSize(160, 13 * 22)
+    listHost:SetSize(150, 13 * 22)
     p.recipeList = ScrollList(listHost, 13, 22, function(host)
         local b = CreateFrame("Button", nil, host)
-        b:SetHighlightTexture("Interface\\QuestFrame\\UI-QuestTitleHighlight", "ADD")
+        b:SetHighlightTexture(FLAT)
+        b:GetHighlightTexture():SetVertexColor(1, 1, 1, 0.06)
         b.sel = b:CreateTexture(nil, "BACKGROUND")
         b.sel:SetAllPoints()
-        b.sel:SetColorTexture(0.2, 0.5, 0.9, 0.35)
+        b.sel:SetColorTexture(T.accent[1], T.accent[2], T.accent[3], 0.22)
+        b.bar = b:CreateTexture(nil, "ARTWORK")
+        b.bar:SetColorTexture(unpack(T.accent))
+        b.bar:SetPoint("TOPLEFT", 0, 0)
+        b.bar:SetPoint("BOTTOMLEFT", 0, 0)
+        b.bar:SetWidth(3)
         b.text = Label(b, "", "GameFontHighlight")
-        b.text:SetPoint("LEFT", 4, 0)
+        b.text:SetPoint("LEFT", 10, 0)
         b.text:SetPoint("RIGHT", -4, 0)
         b:SetScript("OnClick", function(self) SelectRecipe(self.recipe) end)
         return b
@@ -440,6 +510,7 @@ local function BuildBuilder(parent)
         row.recipe = r
         row.text:SetText(r.name ~= "" and r.name or "(ohne Name)")
         row.sel:SetShown(r == cur)
+        row.bar:SetShown(r == cur)
     end)
 
     local up = Button(p, "Hoch", 78, 20, function() p.recipeList:Scroll(-1) end)
@@ -451,8 +522,15 @@ local function BuildBuilder(parent)
     local dup = Button(p, "Makro duplizieren", 160, 24, DuplicateRecipe)
     dup:SetPoint("TOPLEFT", new, "BOTTOMLEFT", 0, -4)
 
+    local share = Button(p, "Teilen (Code)", 160, 24, function() ui.ShowShare(false) end)
+    share:SetPoint("TOPLEFT", dup, "BOTTOMLEFT", 0, -4)
+    Tip(share, "Erzeugt einen Text-Code dieses Makros, den du Freunden schicken kannst.")
+    local imp = Button(p, "Importieren", 160, 24, function() ui.ShowShare(true) end)
+    imp:SetPoint("TOPLEFT", share, "BOTTOMLEFT", 0, -4)
+    Tip(imp, "Code von einem Freund einfügen und als neues Makro übernehmen.")
+
     local hint = Label(p, "Tipp: Zauber und Gegenstände lassen sich aus Zauberbuch, Taschen oder Leiste direkt in die Textfelder ziehen.", "GameFontDisableSmall")
-    hint:SetPoint("TOPLEFT", dup, "BOTTOMLEFT", 0, -10)
+    hint:SetPoint("TOPLEFT", imp, "BOTTOMLEFT", 0, -10)
     hint:SetWidth(160)
     hint:SetJustifyV("TOP")
 
@@ -469,8 +547,8 @@ local function BuildBuilder(parent)
 
     -- Editor
     local e = CreateFrame("Frame", nil, p)
-    e:SetPoint("TOPLEFT", RIGHT_X, 0)
-    e:SetPoint("BOTTOMRIGHT", 0, 0)
+    e:SetPoint("TOPLEFT", RIGHT_X + 10, -2)
+    e:SetPoint("BOTTOMRIGHT", -2, 0)
     p.editor = e
 
     Label(e, "Name"):SetPoint("TOPLEFT", 0, -4)
@@ -543,13 +621,9 @@ local function BuildBuilder(parent)
     box:SetPoint("TOPLEFT", add, "BOTTOMLEFT", 0, -24)
     box:SetPoint("RIGHT", 0, 0)
     box:SetHeight(100)
-    box:SetBackdrop({
-        bgFile = "Interface\\ChatFrame\\ChatFrameBackground",
-        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
-        edgeSize = 12, insets = { left = 3, right = 3, top = 3, bottom = 3 },
-    })
-    box:SetBackdropColor(0, 0, 0, 0.6)
+    Flat(box, T.field)
     p.preview = Label(box, "", "GameFontHighlightSmall")
+    p.preview:SetTextColor(0.65, 0.95, 0.7)
     p.preview:SetPoint("TOPLEFT", 8, -8)
     p.preview:SetPoint("BOTTOMRIGHT", -8, 8)
     p.preview:SetJustifyV("TOP")
@@ -716,32 +790,130 @@ end
 -- Hauptfenster
 ---------------------------------------------------------------------------
 
-local function ShowTab(n)
+local ShowTab
+
+local function BuildShare(parent)
+    local pop = PopupFrame(parent, 560, 130)
+    pop:SetFrameStrata("FULLSCREEN_DIALOG")
+    pop:SetPoint("CENTER")
+    pop.title = Label(pop, "", "GameFontNormal")
+    pop.title:SetPoint("TOPLEFT", 14, -14)
+    pop.box = Edit(pop, 520)
+    pop.box:SetPoint("TOPLEFT", 18, -40)
+    pop.box:SetMaxLetters(0)
+    pop.info = Label(pop, "", "GameFontHighlightSmall")
+    pop.info:SetPoint("TOPLEFT", pop.box, "BOTTOMLEFT", -4, -6)
+    pop.import = Button(pop, "Als neues Makro übernehmen", 200, 24, function()
+        local r, err = NM.ImportRecipe(pop.box:GetText())
+        if not r then pop.info:SetText("|cffff5555" .. err .. "|r") return end
+        local db = NM.db
+        r.id = db.nextId
+        db.nextId = db.nextId + 1
+        table.insert(db.recipes, r)
+        pop:Hide()
+        SelectRecipe(r)
+        NM.Print("Makro \"" .. r.name .. "\" importiert. Prüfe es und klicke auf Speichern.")
+    end)
+    pop.import:SetPoint("BOTTOMLEFT", 14, 12)
+    local close = Button(pop, "Schließen", 100, 24, function() pop:Hide() end)
+    close:SetPoint("BOTTOMRIGHT", -14, 12)
+    pop.box:SetScript("OnEscapePressed", function() pop:Hide() end)
+    return pop
+end
+
+function NM.ShowShare(importMode)
+    local pop = ui.sharePop
+    pop:Show()
+    pop.import:SetShown(importMode)
+    if importMode then
+        pop.title:SetText("Makro importieren")
+        pop.info:SetText("Code mit Strg+V einfügen, dann auf \"Als neues Makro übernehmen\" klicken.")
+        pop.box:SetText("")
+        pop.box:SetFocus()
+    else
+        if not cur then pop:Hide() return end
+        pop.title:SetText("Makro teilen: " .. (cur.name or ""))
+        pop.info:SetText("Alles markiert: Strg+C kopiert den Code, dann im Chat oder Discord an Freunde schicken. Zaubernamen setzen die gleiche Spielsprache voraus.")
+        pop.box:SetText(NM.ExportRecipe(cur))
+        pop.box:SetFocus()
+        pop.box:HighlightText()
+    end
+end
+
+local function BuildSuggest(parent)
+    local p = CreateFrame("Frame", nil, parent)
+    p:SetAllPoints()
+    ui.suggest = p
+
+    local classLoc, classFile = UnitClass("player")
+    local data = {}
+    for _, t in ipairs(NM.CLASS_TEMPLATES[classFile] or {}) do data[#data + 1] = t end
+    for _, t in ipairs(NM.GENERAL_TEMPLATES) do data[#data + 1] = t end
+
+    local head = Label(p, "Vorschläge für " .. tostring(classLoc) .. " (und allgemeine Makros). \"Übernehmen\" legt ein Rezept im Baukasten an, das du anpassen und speichern kannst.", "GameFontHighlight")
+    head:SetPoint("TOPLEFT", 0, 0)
+    head:SetPoint("RIGHT", 0, 0)
+    head:SetJustifyH("LEFT")
+
+    local host = CreateFrame("Frame", nil, p)
+    host:SetPoint("TOPLEFT", 0, -34)
+    host:SetPoint("RIGHT", -90, 0)
+    host:SetHeight(9 * 46)
+
+    p.list = ScrollList(host, 9, 46, function(h)
+        local row = CreateFrame("Frame", nil, h, "BackdropTemplate")
+        Flat(row, T.panel)
+        row.name = Label(row, "", "GameFontNormal")
+        row.name:SetPoint("TOPLEFT", 10, -7)
+        row.desc = Label(row, "", "GameFontHighlightSmall")
+        row.desc:SetPoint("TOPLEFT", row.name, "BOTTOMLEFT", 0, -2)
+        row.desc:SetPoint("RIGHT", -140, 0)
+        row.take = Button(row, "Übernehmen", 120, 24, function(self)
+            local r = NM.Instantiate(self:GetParent().tpl)
+            local db = NM.db
+            r.id = db.nextId
+            db.nextId = db.nextId + 1
+            table.insert(db.recipes, r)
+            SelectRecipe(r)
+            ShowTab(1)
+        end)
+        row.take:SetPoint("RIGHT", -8, 0)
+        return row
+    end, function(row, t)
+        row.tpl = t
+        row.name:SetText(t.name)
+        row.desc:SetText(t.desc or "")
+    end)
+    p.list:SetData(data)
+
+    local side = CreateFrame("Frame", nil, p)
+    side:SetPoint("TOPRIGHT", 0, -34)
+    side:SetSize(84, 60)
+    Button(side, "Hoch", 84, 24, function() p.list:Scroll(-3) end):SetPoint("TOPLEFT", 0, 0)
+    Button(side, "Runter", 84, 24, function() p.list:Scroll(3) end):SetPoint("TOPLEFT", 0, -28)
+    return p
+end
+
+function ShowTab(n)
     ui.currentTab = n
     ui.builder.menu:Hide()
     ui.builder.condPop:Hide()
     ui.builder:SetShown(n == 1)
     ui.wizard:SetShown(n == 2)
-    ui.tabs[1]:SetEnabled(n ~= 1)
-    ui.tabs[2]:SetEnabled(n ~= 2)
+    ui.suggest:SetShown(n == 3)
+    ui.sharePop:Hide()
+    for i = 1, 3 do ui.tabs[i]:SetEnabled(n ~= i) end
     if n == 2 then ui.wizard.rescan() end
     if n == 1 then RefreshBuilder() end
 end
 
 local function CreateMain()
-    local f
-    local ok = pcall(function() f = CreateFrame("Frame", "NevMakroFrame", UIParent, "BasicFrameTemplateWithInset") end)
-    if not ok or not f then
-        f = CreateFrame("Frame", "NevMakroFrame", UIParent, "BackdropTemplate")
-        f:SetBackdrop({
-            bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-            tile = true, tileSize = 32, edgeSize = 32,
-            insets = { left = 11, right = 12, top = 12, bottom = 11 },
-        })
-        local close = CreateFrame("Button", nil, f, "UIPanelCloseButton")
-        close:SetPoint("TOPRIGHT", -4, -4)
-    end
+    local _, classFile = UnitClass("player")
+    local cc = RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile]
+    if cc then T.accent = { cc.r, cc.g, cc.b } end
+
+    local f = CreateFrame("Frame", "NevMakroFrame", UIParent, "BackdropTemplate")
+    Flat(f, T.bg, { 0.02, 0.02, 0.03, 1 })
     f:SetSize(W, H)
     f:SetPoint("CENTER")
     f:SetFrameStrata("DIALOG")
@@ -754,22 +926,51 @@ local function CreateMain()
     tinsert(UISpecialFrames, "NevMakroFrame")
     ui = f
 
-    local title = Label(f, "NevMakro", "GameFontNormalLarge")
-    title:SetPoint("TOP", 0, -5)
+    local header = f:CreateTexture(nil, "BACKGROUND")
+    header:SetPoint("TOPLEFT", 1, -1)
+    header:SetPoint("TOPRIGHT", -1, -1)
+    header:SetHeight(58)
+    header:SetColorTexture(0.085, 0.095, 0.125, 1)
+    local line = f:CreateTexture(nil, "ARTWORK")
+    line:SetPoint("TOPLEFT", header, "BOTTOMLEFT", 0, 0)
+    line:SetPoint("TOPRIGHT", header, "BOTTOMRIGHT", 0, 0)
+    line:SetHeight(2)
+    line:SetColorTexture(unpack(T.accent))
+
+    local logo = f:CreateTexture(nil, "ARTWORK")
+    logo:SetSize(34, 34)
+    logo:SetPoint("TOPLEFT", 14, -12)
+    logo:SetTexture("Interface\\Icons\\INV_Scroll_03")
+    logo:SetTexCoord(0.08, 0.92, 0.08, 0.92)
+
+    local title = f:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", logo, "TOPRIGHT", 10, -2)
+    title:SetText("Nev|cffffffffMakro|r")
+    title:SetTextColor(unpack(T.accent))
+    local sub = Label(f, "Makros per Klick bauen, teilen und für deine Klasse vorschlagen lassen", "GameFontDisableSmall")
+    sub:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -3)
+
+    local close = Button(f, "X", 26, 26, function() f:Hide() end)
+    close:SetPoint("TOPRIGHT", -12, -16)
 
     f.tabs = {
-        Button(f, "Makro-Baukasten", 160, 24, function() ShowTab(1) end),
-        Button(f, "Pet-Angriff-Assistent", 180, 24, function() ShowTab(2) end),
+        Button(f, "Makro-Baukasten", 150, 26, function() ShowTab(1) end),
+        Button(f, "Pet-Angriff", 120, 26, function() ShowTab(2) end),
+        Button(f, "Vorschläge", 120, 26, function() ShowTab(3) end),
     }
-    f.tabs[1]:SetPoint("TOPLEFT", 14, -30)
-    f.tabs[2]:SetPoint("LEFT", f.tabs[1], "RIGHT", 6, 0)
+    f.tabs[3]:SetPoint("RIGHT", close, "LEFT", -18, 0)
+    f.tabs[2]:SetPoint("RIGHT", f.tabs[3], "LEFT", -4, 0)
+    f.tabs[1]:SetPoint("RIGHT", f.tabs[2], "LEFT", -4, 0)
 
     local content = CreateFrame("Frame", nil, f)
-    content:SetPoint("TOPLEFT", 16, -64)
-    content:SetPoint("BOTTOMRIGHT", -16, 16)
+    content:SetPoint("TOPLEFT", 22, -82)
+    content:SetPoint("BOTTOMRIGHT", -22, 22)
 
     BuildBuilder(content)
     BuildWizard(content)
+    BuildSuggest(content)
+    f.sharePop = BuildShare(f)
+    f.ShowShare = NM.ShowShare
     f:Hide()
 end
 
