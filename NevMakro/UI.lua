@@ -858,18 +858,19 @@ local function BuildSuggest(parent)
     ui.suggest = p
 
     local classLoc, classFile = UnitClass("player")
-    local data = {}
-    for _, t in ipairs(NM.CLASS_TEMPLATES[classFile] or {}) do data[#data + 1] = t end
-    for _, t in ipairs(NM.GENERAL_TEMPLATES) do data[#data + 1] = t end
-    for _, t in ipairs(NM.PROFESSION_TEMPLATES) do data[#data + 1] = t end
+    local section, showAllProf = 1, false
 
-    local head = Label(p, "Vorschläge für " .. tostring(classLoc) .. " (allgemeine Makros und Berufe). \"Übernehmen\" legt ein Rezept im Baukasten an, das du anpassen und speichern kannst.", "GameFontHighlight")
-    head:SetPoint("TOPLEFT", 0, 0)
-    head:SetPoint("RIGHT", 0, 0)
-    head:SetJustifyH("LEFT")
+    local head = Label(p, "", "GameFontHighlight")
+    head:SetPoint("TOPLEFT", 0, -36)
+    head:SetPoint("RIGHT", -150, 0)
+    head:SetHeight(28)
+    head:SetJustifyV("TOP")
+
+    local allBtn = Button(p, "Alle anzeigen", 130, 22, function() showAllProf = not showAllProf; p.refresh() end)
+    allBtn:SetPoint("TOPRIGHT", -90, -36)
 
     local host = CreateFrame("Frame", nil, p)
-    host:SetPoint("TOPLEFT", 0, -34)
+    host:SetPoint("TOPLEFT", 0, -70)
     host:SetPoint("RIGHT", -90, 0)
     host:SetHeight(9 * 46)
 
@@ -897,13 +898,47 @@ local function BuildSuggest(parent)
         row.name:SetText(t.name)
         row.desc:SetText(t.desc or "")
     end)
-    p.list:SetData(data)
 
     local side = CreateFrame("Frame", nil, p)
-    side:SetPoint("TOPRIGHT", 0, -34)
+    side:SetPoint("TOPRIGHT", 0, -70)
     side:SetSize(84, 60)
     Button(side, "Hoch", 84, 24, function() p.list:Scroll(-3) end):SetPoint("TOPLEFT", 0, 0)
     Button(side, "Runter", 84, 24, function() p.list:Scroll(3) end):SetPoint("TOPLEFT", 0, -28)
+
+    p.sections = {
+        Button(p, "Klasse: " .. tostring(classLoc), 190, 26, function() section = 1; p.refresh() end),
+        Button(p, "Allgemein", 130, 26, function() section = 2; p.refresh() end),
+        Button(p, "Berufe", 130, 26, function() section = 3; p.refresh() end),
+    }
+    p.sections[1]:SetPoint("TOPLEFT", 0, 0)
+    p.sections[2]:SetPoint("LEFT", p.sections[1], "RIGHT", 4, 0)
+    p.sections[3]:SetPoint("LEFT", p.sections[2], "RIGHT", 4, 0)
+
+    function p.refresh()
+        for i, b in ipairs(p.sections) do b:SetEnabled(i ~= section) end
+        allBtn:SetShown(section == 3)
+        local data
+        if section == 1 then
+            data = NM.CLASS_TEMPLATES[classFile] or {}
+            head:SetText("Fertige Makros für deine Klasse. \"Übernehmen\" legt ein Rezept im Baukasten an, das du anpassen und speichern kannst.")
+        elseif section == 2 then
+            data = NM.GENERAL_TEMPLATES
+            head:SetText("Makros, die jede Klasse brauchen kann: Reittier, Tränke, Ansagen, Zielmarker und mehr.")
+        else
+            local have, names = NM.DetectProfessions()
+            data = NM.ProfessionTemplates(have, showAllProf)
+            allBtn:SetText(showAllProf and "Nur meine Berufe" or "Alle anzeigen")
+            if #names > 0 then
+                head:SetText("Erkannte Berufe: " .. table.concat(names, ", ") .. ". Es werden nur dazu passende Vorlagen gezeigt.")
+            elseif showAllProf then
+                head:SetText("Alle Berufs-Vorlagen werden gezeigt.")
+            else
+                head:SetText("Es wurde kein Beruf erkannt (oder dein Client meldet sie nicht). Mit \"Alle anzeigen\" siehst du alle Vorlagen.")
+            end
+        end
+        p.list.offset = 0
+        p.list:SetData(data)
+    end
     return p
 end
 
@@ -914,6 +949,7 @@ function ShowTab(n)
     ui.builder:SetShown(n == 1)
     ui.wizard:SetShown(n == 2)
     ui.suggest:SetShown(n == 3)
+    if n == 3 then ui.suggest.refresh() end
     ui.sharePop:Hide()
     for i = 1, 3 do ui.tabs[i]:SetEnabled(n ~= i) end
     if n == 2 then ui.wizard.rescan() end

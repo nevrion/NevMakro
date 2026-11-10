@@ -62,6 +62,8 @@ NM.CLASS_TEMPLATES = {
           blocks = { S(1766, "Kick", { target = "mouseover" }) } },
         { name = "Finsterer Stoß + Ausweiden", desc = "Strg = Ausweiden, sonst Finsterer Stoß.",
           blocks = { S(2098, "Eviscerate", { conds = { mod = "ctrl" } }), S(1752, "Sinister Strike", { join = "or" }) } },
+        { name = "Schlossknacken", desc = "Schloss knacken und gleich das Item (Truhe, Kiste) benutzen. Item im Baukasten eintragen.",
+          blocks = { S(1804, "Pick Lock"), B("item") } },
         { name = "Sprinten + Entrinnen", desc = "Shift = Entrinnen, sonst Sprinten.",
           blocks = { S(5277, "Evasion", { conds = { mod = "shift" } }), S(2983, "Sprint", { join = "or" }) } },
     },
@@ -138,19 +140,89 @@ NM.GENERAL_TEMPLATES = {
       blocks = { B("cancelaura") } },
 }
 
--- Berufe: Felder ohne Namen bleiben leer und werden im Baukasten ausgefüllt
+-- Berufe: ids = Eröffnungszauber je Rang, craft = Herstellungsberuf. Felder ohne Namen bleiben leer.
+NM.PROFESSIONS = {
+    enchanting     = { ids = { 7411, 7412, 7413, 13920 }, craft = true },
+    alchemy        = { ids = { 2259, 3101, 3464, 11611 }, craft = true },
+    blacksmithing  = { ids = { 2018, 3100, 3538, 9785 }, craft = true },
+    engineering    = { ids = { 4036, 4037, 4038, 12656 }, craft = true },
+    leatherworking = { ids = { 2108, 3104, 3811, 10662 }, craft = true },
+    tailoring      = { ids = { 3908, 3909, 3910, 12180 }, craft = true },
+    cooking        = { ids = { 2550, 3102, 3413, 18260 }, craft = true },
+    mining         = { ids = { 2575, 2576, 3564, 10248 } },
+    herbalism      = { ids = { 2366, 2368, 3570, 11993 } },
+    skinning       = { ids = { 8613, 8617, 8618, 10768 } },
+    fishing        = { ids = { 7620, 7731, 7732, 18248 } },
+}
+
 NM.PROFESSION_TEMPLATES = {
-    { name = "VZ/Handwerk: Rezept + Item", desc = "Beruf: Rezept und immer dasselbe Item verwenden (z.B. Verzauberkunst skillen). Im Baukasten Rezeptnamen und Item eintragen (Item aus der Tasche ins Feld ziehen), Verzauberfenster offen lassen, eine Taste drücken.",
+    { name = "Rezept + Item", need = "craft", desc = "Immer dasselbe Item mit einem Rezept verwenden (z.B. Verzauberkunst skillen). Rezept und Item im Baukasten eintragen, Berufsfenster offen lassen, eine Taste drücken.",
       blocks = { B("spell"), B("item") } },
-    { name = "Entzaubern", desc = "Beruf: Entzaubern und gleich das Item aus der Tasche eintragen, das aufgelöst werden soll.",
+    { name = "Entzaubern", need = "enchanting", desc = "Entzaubern und gleich das Item aus der Tasche eintragen, das aufgelöst werden soll.",
       blocks = { S(13262, "Disenchant"), B("item") } },
-    { name = "Schlossknacken", desc = "Beruf (Schurke): Schloss knacken und gleich das Item (Truhe, Kiste) benutzen.",
-      blocks = { S(1804, "Pick Lock"), B("item") } },
-    { name = "Sammel-Tracking wechseln", desc = "Beruf: Kräuter und Erz suchen mit einer Taste, bei jedem Druck wird gewechselt.",
+    { name = "Kochfeuer", need = "cooking", desc = "Entzündet ein Kochfeuer, damit du kochen kannst.",
+      blocks = { S(818, "Basic Campfire") } },
+    { name = "Schmelzen", need = "mining", desc = "Öffnet das Schmelzfenster.",
+      blocks = { S(2656, "Smelting") } },
+    { name = "Erz suchen", need = "mining", desc = "Schaltet das Erz-Tracking an.",
+      blocks = { S(2580, "Find Minerals") } },
+    { name = "Kräuter suchen", need = "herbalism", desc = "Schaltet das Kräuter-Tracking an.",
+      blocks = { S(2383, "Find Herbs") } },
+    { name = "Sammel-Tracking", need = { "mining", "herbalism" }, desc = "Kräuter und Erz suchen mit einer Taste, bei jedem Druck wird gewechselt.",
       blocks = { { type = "castseq", castIds = { 2383, 2580 }, castEn = { "Find Herbs", "Find Minerals" } } } },
-    { name = "Angeln", desc = "Beruf: Angeln starten. Köder im Baukasten als Gegenstand davor setzen.",
+    { name = "Angeln", need = "fishing", desc = "Angeln starten. Köder im Baukasten als Gegenstand davor setzen.",
       blocks = { S(7620, "Fishing") } },
 }
+
+local function known(id)
+    if IsPlayerSpell and IsPlayerSpell(id) then return true end
+    if IsSpellKnown and IsSpellKnown(id) then return true end
+end
+
+-- Liefert Set der erkannten Berufe (key = true) und eine Liste ihrer Anzeigenamen
+function NM.DetectProfessions()
+    local names = {}
+    if GetProfessions and GetProfessionInfo then
+        for _, idx in pairs({ GetProfessions() }) do
+            if idx then names[(GetProfessionInfo(idx))] = true end
+        end
+    end
+    if GetNumSkillLines and GetSkillLineInfo then
+        for i = 1, GetNumSkillLines() do
+            local n, header = GetSkillLineInfo(i)
+            if n and not header then names[n] = true end
+        end
+    end
+    local have, list = {}, {}
+    for key, def in pairs(NM.PROFESSIONS) do
+        local found = names[NM.SpellName(def.ids[1]) or ""] 
+        for _, id in ipairs(def.ids) do
+            if known(id) then found = true end
+        end
+        if found then
+            have[key] = true
+            if def.craft then have.craft = true end
+            list[#list + 1] = NM.SpellName(def.ids[1]) or key
+        end
+    end
+    table.sort(list)
+    return have, list
+end
+
+function NM.ProfessionTemplates(have, all)
+    local out = {}
+    for _, t in ipairs(NM.PROFESSION_TEMPLATES) do
+        local ok = all
+        if not ok then
+            ok = true
+            for _, k in ipairs(type(t.need) == "table" and t.need or { t.need }) do
+                if not have[k] then ok = false end
+            end
+        end
+        if ok then out[#out + 1] = t end
+    end
+    return out
+end
 
 local function SpellText(id, en)
     local n = NM.SpellName(id)
