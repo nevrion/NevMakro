@@ -344,20 +344,44 @@ function NM.BuildBarBody(spellName, opts)
     return table.concat(lines, "\n")
 end
 
+local function SpellIdByName(name)
+    if C_Spell and C_Spell.GetSpellInfo then
+        local i = C_Spell.GetSpellInfo(name)
+        if type(i) == "table" then return i.spellID end
+    end
+    if GetSpellInfo then return (select(7, GetSpellInfo(name))) end
+end
+
+-- Erkennt Leisten-Makros dieses Addons am Namen, auch wenn die gespeicherte Zuordnung fehlt
+local function OurMacroInfo(slot)
+    local mname = GetActionText and GetActionText(slot)
+    if not mname or mname == "" then return end
+    local info = NM.char.applied[slot]
+    if info and info.macro == mname then return info end
+    if mname:find("^NM%-") or mname:find("^P%-") then
+        local _, _, body = GetMacroInfo(mname)
+        local spell = body and body:match("#showtooltip ([^\n]+)")
+        if spell then
+            info = { macro = mname, spell = spell, id = SpellIdByName(spell) }
+            NM.char.applied[slot] = info
+            return info
+        end
+    end
+end
+
 function NM.ScanBar()
     local rows = {}
-    local applied = NM.char.applied
     for slot = 1, 120 do
         local kind, id = GetActionInfo(slot)
-        if kind == "spell" and id then
+        if kind == "macro" then
+            local info = OurMacroInfo(slot)
+            if info then
+                rows[#rows + 1] = { slot = slot, kind = "ours", info = info, name = info.spell, icon = GetActionTexture(slot) }
+            end
+        elseif kind == "spell" and id then
             local name = NM.SpellName(id)
             if name then
                 rows[#rows + 1] = { slot = slot, kind = "spell", id = id, name = name, icon = GetActionTexture(slot) }
-            end
-        elseif kind == "macro" and applied[slot] then
-            local info = applied[slot]
-            if GetMacroInfo(id) == info.macro then
-                rows[#rows + 1] = { slot = slot, kind = "ours", info = info, name = info.spell, icon = GetActionTexture(slot) }
             end
         end
     end
@@ -397,6 +421,8 @@ end
 function NM.UndoPet(row)
     if InCombatLockdown() then return false, "Im Kampf nicht möglich." end
     local info = row.info
+    info.id = info.id or SpellIdByName(info.spell)
+    if not info.id then return false, "Original-Zauber \"" .. tostring(info.spell) .. "\" nicht gefunden." end
     local idx = GetMacroIndexByName(info.macro)
     ClearCursor()
     if idx and idx > 0 then DeleteMacro(idx) end
