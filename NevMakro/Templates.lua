@@ -112,6 +112,30 @@ NM.GENERAL_TEMPLATES = {
       blocks = { B("item", { text = "13" }), B("item", { text = "14" }) } },
     { name = "Absteigen", desc = "Steigt vom Reittier ab.",
       blocks = { B("dismount") } },
+    { name = "Reittier an/aus", desc = "Eine Taste: abgestiegen = aufsitzen, auf dem Reittier = absteigen. Reittier im Baukasten eintragen.",
+      blocks = { B("dismount"), B("item", { conds = { mount = "nomounted" } }) } },
+    { name = "Trank im Kampf", desc = "Benutzt deinen Trank nur im Kampf. Trank im Baukasten eintragen.",
+      blocks = { B("item", { conds = { combat = "combat" } }) } },
+    { name = "Heilstein + Trank", desc = "Heilstein und Heiltrank mit einer Taste, jeder hat seine eigene Abklingzeit. Beide Items eintragen.",
+      blocks = { B("item"), B("item") } },
+    { name = "Essen und Trinken", desc = "Isst und trinkt nur außerhalb des Kampfs. Essen und Getränk eintragen.",
+      blocks = { B("item", { conds = { combat = "nocombat" } }), B("item", { conds = { combat = "nocombat" } }) } },
+    { name = "Feind + Angriff", tip = false, desc = "Visiert den nächsten Feind an, falls du keinen im Ziel hast, und startet den Auto-Angriff.",
+      blocks = { B("raw", { text = "/targetenemy [noharm]" }), B("startattack") } },
+    { name = "Notbremse", tip = false, desc = "Bricht Zauber und Auto-Angriff ab und ruft das Pet zurück.",
+      blocks = { B("stopcasting"), B("stopattack"), B("petfollow") } },
+    { name = "Gruppe: Pull-Ansage", tip = false, desc = "Schreibt in den Gruppenchat, dass gepullt wird.",
+      blocks = { B("raw", { text = "/p Pull in 5 Sekunden, bitte bereit machen!" }) } },
+    { name = "Gruppe: Mana-Pause", tip = false, desc = "Sagt der Gruppe, dass du Mana brauchst.",
+      blocks = { B("raw", { text = "/p Ich brauche kurz Mana, bitte kurz warten." }) } },
+    { name = "Ziel: Totenkopf", tip = false, desc = "Markiert dein Ziel mit dem Totenkopf.",
+      blocks = { B("raw", { text = "/script SetRaidTarget(\"target\", 8)" }) } },
+    { name = "Ziel: Kreuz", tip = false, desc = "Markiert dein Ziel mit dem roten Kreuz.",
+      blocks = { B("raw", { text = "/script SetRaidTarget(\"target\", 7)" }) } },
+    { name = "Assist Mouseover", tip = false, desc = "Übernimmt das Ziel des Spielers unter der Maus (sonst deines Ziels), z.B. dem Tank.",
+      blocks = { B("raw", { text = "/assist [@mouseover,help,exists][]" }) } },
+    { name = "Buff entfernen", desc = "Entfernt einen Buff per Tastendruck. Buffname im Baukasten eintragen.",
+      blocks = { B("cancelaura") } },
 }
 
 -- Berufe: Felder ohne Namen bleiben leer und werden im Baukasten ausgefüllt
@@ -135,7 +159,7 @@ end
 
 -- Baut aus einer Vorlage ein neues Rezept (Zaubernamen in der Client-Sprache)
 function NM.Instantiate(tpl)
-    local r = { name = NM.Trunc(tpl.name, 16), showTooltip = true, perChar = true, long = false, blocks = {} }
+    local r = { name = NM.Trunc(tpl.name, 16), showTooltip = tpl.tip ~= false, perChar = true, long = false, blocks = {} }
     for _, src in ipairs(tpl.blocks) do
         local b = { type = src.type, text = src.text or "", target = src.target or "normal", join = src.join, reset = src.reset, conds = {} }
         for k, v in pairs(src.conds or {}) do b.conds[k] = v end

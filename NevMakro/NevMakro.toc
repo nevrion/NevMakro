@@ -4,7 +4,7 @@
 ## Notes: Makros per Klick bauen, teilen und für deine Klasse vorschlagen lassen. Befehl: /nm
 ## Notes-deDE: Makros per Klick bauen, teilen und für deine Klasse vorschlagen lassen. Befehl: /nm
 ## Author: Pierre
-## Version: 0.3.3
+## Version: 0.3.4
 ## SavedVariables: NevMakroDB
 ## SavedVariablesPerCharacter: NevMakroChar
 
